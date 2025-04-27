@@ -13,6 +13,8 @@ dependencies {
     testImplementation(kotlin("test"))
 }
 
+apply(from = "./ktlint.gradle")
+
 tasks.test {
     useJUnitPlatform()
 }

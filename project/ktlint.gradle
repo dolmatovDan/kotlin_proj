@@ -1,0 +1,40 @@
+configurations {
+    ktlint
+}
+
+dependencies {
+    ktlint("com.pinterest.ktlint:ktlint-cli:1.5.0") {
+        attributes {
+            attribute(Bundling.BUNDLING_ATTRIBUTE, getObjects().named(Bundling, Bundling.EXTERNAL))
+        }
+    }
+}
+
+tasks.register("ktlintCheck", JavaExec) {
+    group = "verification"
+    description = "Check Kotlin code style."
+    classpath = configurations.ktlint
+    mainClass = "com.pinterest.ktlint.Main"
+    args "src/**/*.kt", "**.kts", "!**/build/**"
+}
+
+tasks.named("check") {
+    dependsOn tasks.named("ktlintCheck")
+}
+
+tasks.register("ktlintFormat", JavaExec) {
+    group = "formatting"
+    description = "Fix Kotlin code style deviations."
+    classpath = configurations.ktlint
+    mainClass = "com.pinterest.ktlint.Main"
+    jvmArgs "--add-opens=java.base/java.lang=ALL-UNNAMED"
+    args "-F", "src/**/*.kt", "**.kts", "!**/build/**"
+}
+
+tasks.register("ktlintBuild", JavaExec) {
+    dependsOn tasks.named("ktlintFormat")
+    dependsOn tasks.named("classes")
+    group = "build"
+    description = "Fix Kotlin code style deviations and build then"
+
+}
