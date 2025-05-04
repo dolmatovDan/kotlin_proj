@@ -3,10 +3,13 @@ import kotlinx.coroutines.runBlocking
 fun main() = runBlocking {
     val rates = Rates()
     try {
-        val rawData = rates.getRawRates()
-        println("Данные получены успешно:")
-        println(rawData)
+        val currencyData = rates.getCurrencyRates()
+        println("Курсы валют на ${currencyData.date}")
+        currencyData.valutes.forEach {
+            println("${it.charCode} (${it.name}): ${it.value} за ${it.nominal}")
+        }
     } catch (e: Exception) {
-        println("Ошибка при получении данных: ${e.message}")
+        println("Ошибка: ${e.message}")
+        e.printStackTrace()
     }
 }
