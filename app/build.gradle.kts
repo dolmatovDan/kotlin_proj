@@ -66,4 +66,6 @@ dependencies {
     // Kotlin Corootines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.6.4")
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.5.1") // Для viewModelScope
+
+    implementation("androidx.core:core-ktx:1.7.0")
 }
