@@ -60,7 +60,9 @@ class Rates {
             else -> currencyRates[toCurrency]
         }
 
-        if (fromRate == null || toRate == null) return null
+        if (fromRate == null || toRate == null)  {
+            throw IllegalArgumentException()
+        }
 
         return fromRate / toRate
     }
@@ -83,14 +85,17 @@ class Rates {
                             currentCharCode = null
                             currentValue = null
                         }
+
                         "CharCode" -> {
                             parser.next()
                             currentCharCode = parser.text
                         }
+
                         "Value" -> {
                             parser.next()
                             currentValue = parser.text.replace(",", ".").toDouble()
                         }
+
                         "Nominal" -> {
                             parser.next()
                             val nominal = parser.text.replace(",", ".").toDouble()
@@ -100,6 +105,7 @@ class Rates {
                         }
                     }
                 }
+
                 XmlPullParser.END_TAG -> {
                     if (parser.name == "Valute" && currentCharCode != null && currentValue != null) {
                         currencyRates[currentCharCode] = currentValue

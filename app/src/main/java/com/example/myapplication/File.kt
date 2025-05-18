@@ -1,4 +1,5 @@
 import android.content.Context
+import android.util.Log
 import android.widget.Toast
 import java.io.File
 import java.io.FileOutputStream
@@ -28,6 +29,7 @@ object FileManager {
         return try {
             val content = savedRates.joinToString("\n")
             val file = File(context.filesDir, FILE_NAME)
+            Log.d("File", file.absolutePath)
 
             FileOutputStream(file).use { fos ->
                 fos.write(content.toByteArray())

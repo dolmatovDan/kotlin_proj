@@ -12,6 +12,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.myapplication.ui.theme.MyApplicationTheme
@@ -47,54 +48,20 @@ fun CurrencyConverterScreen() {
         "HKD - Гонконгский доллар", "SGD - Сингапурский доллар", "KRW - Южнокорейская вона"
     )
 
-    // Состояния для списков валют
+    // Состояния для UI
     var currency1 by remember { mutableStateOf("") }
     var expanded1 by remember { mutableStateOf(false) }
     var currency2 by remember { mutableStateOf("") }
     var expanded2 by remember { mutableStateOf(false) }
-
-    // Состояния для результатов и UI
     var result by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     var currentRate by remember { mutableStateOf<Double?>(null) }
     var currentSrcCurrency by remember { mutableStateOf("") }
     var currentDstCurrency by remember { mutableStateOf("") }
-    var savedRates by remember { mutableStateOf<List<String>>(emptyList()) }
-    var notification by remember { mutableStateOf<String?>(null) } // Новое состояние для уведомлений
+    var notification by remember { mutableStateOf("") }
 
     val scope = rememberCoroutineScope()
-
-    // Функция для добавления курса в историю
-    fun addToHistory() {
-        currentRate?.let { rate ->
-            val dateTime = SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.getDefault()).format(Date())
-            val record = "$dateTime: 1 $currentSrcCurrency = ${"%.4f".format(rate)} $currentDstCurrency"
-            savedRates = savedRates + record
-            notification = "Курс добавлен в историю"
-        }
-    }
-
-    // Функция для сохранения истории в файл
-    fun saveToFile(): Boolean {
-        if (savedRates.isEmpty()) {
-            notification = "Нет сохраненных курсов"
-            return false
-        }
-
-        return try {
-            val content = savedRates.joinToString("\n")
-            context.openFileOutput("saved_rates.txt", Context.MODE_PRIVATE).use {
-                it.write(content.toByteArray())
-            }
-            savedRates = emptyList()
-            notification = "История успешно сохранена в файл"
-            true
-        } catch (e: Exception) {
-            notification = "Ошибка при сохранении файла"
-            false
-        }
-    }
 
     Column(
         modifier = Modifier
@@ -103,20 +70,16 @@ fun CurrencyConverterScreen() {
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Область для уведомлений
-        if (!notification.isNullOrEmpty()) {
-            Text(
-                text = notification!!,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(bottom = 16.dp)
-            )
-
-            // Очищаем уведомление через 3 секунды
-            LaunchedEffect(notification) {
-                delay(3000)
-                notification = null
-            }
-        }
+        // Фиксированное поле для уведомлений
+        Text(
+            text = notification,
+            color = if (notification.isNotEmpty()) MaterialTheme.colorScheme.primary
+            else MaterialTheme.colorScheme.background,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(48.dp),
+            textAlign = TextAlign.Center
+        )
 
         // Первый список с поиском
         ExposedDropdownMenuBox(
@@ -151,15 +114,16 @@ fun CurrencyConverterScreen() {
                         )
                     }
                 } else {
-                    allCurrencies.filter { it.contains(currency1, ignoreCase = true) }.forEach { item ->
-                        DropdownMenuItem(
-                            text = { Text(item) },
-                            onClick = {
-                                currency1 = item
-                                expanded1 = false
-                            }
-                        )
-                    }
+                    allCurrencies.filter { it.contains(currency1, ignoreCase = true) }
+                        .forEach { item ->
+                            DropdownMenuItem(
+                                text = { Text(item) },
+                                onClick = {
+                                    currency1 = item
+                                    expanded1 = false
+                                }
+                            )
+                        }
                 }
             }
         }
@@ -199,15 +163,16 @@ fun CurrencyConverterScreen() {
                         )
                     }
                 } else {
-                    allCurrencies.filter { it.contains(currency2, ignoreCase = true) }.forEach { item ->
-                        DropdownMenuItem(
-                            text = { Text(item) },
-                            onClick = {
-                                currency2 = item
-                                expanded2 = false
-                            }
-                        )
-                    }
+                    allCurrencies.filter { it.contains(currency2, ignoreCase = true) }
+                        .forEach { item ->
+                            DropdownMenuItem(
+                                text = { Text(item) },
+                                onClick = {
+                                    currency2 = item
+                                    expanded2 = false
+                                }
+                            )
+                        }
                 }
             }
         }
@@ -257,6 +222,8 @@ fun CurrencyConverterScreen() {
                         currentSrcCurrency = srcCurrency
                         currentDstCurrency = dstCurrency
                         result = "1 $srcCurrency = %.4f $dstCurrency".format(rate)
+                    } catch (e: IllegalArgumentException) {
+                        error = "Ошибка: валюта не найдена"
                     } catch (e: Exception) {
                         error = "Ошибка: ${e.localizedMessage}"
                     } finally {
@@ -275,8 +242,18 @@ fun CurrencyConverterScreen() {
         // Кнопка добавления в историю
         Button(
             onClick = {
-                if (currentRate != null) {
-                    addToHistory()
+                currentRate?.let { rate ->
+                    FileManager.addRateToHistory(
+                        context,
+                        currentSrcCurrency,
+                        currentDstCurrency,
+                        rate
+                    )
+                    notification = "Курс добавлен в историю"
+                    scope.launch {
+                        delay(3000)
+                        notification = ""
+                    }
                 }
             },
             modifier = Modifier.fillMaxWidth(),
@@ -289,9 +266,19 @@ fun CurrencyConverterScreen() {
 
         // Кнопка сохранения в файл
         Button(
-            onClick = { saveToFile() },
+            onClick = {
+                if (FileManager.saveRatesToFile(context)) {
+                    notification = "Файл успешно сохранен"
+                } else {
+                    notification = "Ошибка при сохранении файла"
+                }
+                scope.launch {
+                    delay(3000)
+                    notification = ""
+                }
+            },
             modifier = Modifier.fillMaxWidth(),
-            enabled = savedRates.isNotEmpty()
+            enabled = FileManager.hasSavedRates()
         ) {
             Text("Сохранить историю в файл")
         }
