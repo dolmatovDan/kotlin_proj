@@ -1,4 +1,5 @@
 import android.content.Context
+import android.os.Environment
 import android.util.Log
 import android.widget.Toast
 import java.io.File
@@ -28,7 +29,8 @@ object FileManager {
 
         return try {
             val content = savedRates.joinToString("\n")
-            val file = File(context.filesDir, FILE_NAME)
+            val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+            val file = File(downloadsDir, "saved_currency_rates.txt")
             Log.d("File", file.absolutePath)
 
             FileOutputStream(file).use { fos ->

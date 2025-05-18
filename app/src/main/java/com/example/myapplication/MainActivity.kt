@@ -1,11 +1,19 @@
 package com.example.myapplication
 
+import FileManager.saveRatesToFile
 import Rates
+import android.Manifest
 import android.content.Context
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
+import android.os.Environment
 import android.util.Log
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -15,10 +23,13 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import com.example.myapplication.ui.theme.MyApplicationTheme
-import kotlinx.coroutines.*
+import java.io.File
+import java.io.FileOutputStream
 import java.text.SimpleDateFormat
 import java.util.*
+import kotlinx.coroutines.*
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -60,8 +71,66 @@ fun CurrencyConverterScreen() {
     var currentSrcCurrency by remember { mutableStateOf("") }
     var currentDstCurrency by remember { mutableStateOf("") }
     var notification by remember { mutableStateOf("") }
+    var showPermissionDialog by remember { mutableStateOf(false) }
 
     val scope = rememberCoroutineScope()
+
+    // Лаунчер для запроса разрешения
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            saveRatesToFile(context)
+        } else {
+            showPermissionDialog = true
+        }
+    }
+
+    fun addToHistory() {
+        currentRate?.let { rate ->
+            val dateTime = SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.getDefault()).format(Date())
+            val record = "$dateTime: 1 $currentSrcCurrency = ${"%.4f".format(rate)} $currentDstCurrency"
+            FileManager.addRateToHistory(context, currentSrcCurrency, currentDstCurrency, rate)
+            notification = "Курс добавлен в историю"
+            scope.launch {
+                delay(3000)
+                notification = ""
+            }
+        }
+    }
+
+    fun saveRatesToFile(context: Context) {
+        if (FileManager.hasSavedRates()) {
+            val success = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q ||
+                ContextCompat.checkSelfPermission(
+                    context,
+                    Manifest.permission.WRITE_EXTERNAL_STORAGE
+                ) == PackageManager.PERMISSION_GRANTED
+            ) {
+                FileManager.saveRatesToFile(context)
+            } else {
+                permissionLauncher.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                return
+            }
+
+            if (success) {
+                notification = "Файл сохранен в папке Download"
+                FileManager.clearSavedRates()
+            } else {
+                notification = "Ошибка при сохранении файла"
+            }
+            scope.launch {
+                delay(3000)
+                notification = ""
+            }
+        } else {
+            notification = "Нет данных для сохранения"
+            scope.launch {
+                delay(3000)
+                notification = ""
+            }
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -70,7 +139,7 @@ fun CurrencyConverterScreen() {
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Фиксированное поле для уведомлений
+        // Уведомления
         Text(
             text = notification,
             color = if (notification.isNotEmpty()) MaterialTheme.colorScheme.primary
@@ -80,6 +149,28 @@ fun CurrencyConverterScreen() {
                 .height(48.dp),
             textAlign = TextAlign.Center
         )
+
+        // Диалог запроса разрешения
+        if (showPermissionDialog) {
+            AlertDialog(
+                onDismissRequest = { showPermissionDialog = false },
+                title = { Text("Требуется разрешение") },
+                text = { Text("Для сохранения файлов необходимо разрешение на доступ к хранилищу") },
+                confirmButton = {
+                    Button(onClick = {
+                        showPermissionDialog = false
+                        permissionLauncher.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                    }) {
+                        Text("Разрешить")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showPermissionDialog = false }) {
+                        Text("Отмена")
+                    }
+                }
+            )
+        }
 
         // Первый список с поиском
         ExposedDropdownMenuBox(
@@ -241,21 +332,7 @@ fun CurrencyConverterScreen() {
 
         // Кнопка добавления в историю
         Button(
-            onClick = {
-                currentRate?.let { rate ->
-                    FileManager.addRateToHistory(
-                        context,
-                        currentSrcCurrency,
-                        currentDstCurrency,
-                        rate
-                    )
-                    notification = "Курс добавлен в историю"
-                    scope.launch {
-                        delay(3000)
-                        notification = ""
-                    }
-                }
-            },
+            onClick = { addToHistory() },
             modifier = Modifier.fillMaxWidth(),
             enabled = currentRate != null
         ) {
@@ -266,17 +343,7 @@ fun CurrencyConverterScreen() {
 
         // Кнопка сохранения в файл
         Button(
-            onClick = {
-                if (FileManager.saveRatesToFile(context)) {
-                    notification = "Файл успешно сохранен"
-                } else {
-                    notification = "Ошибка при сохранении файла"
-                }
-                scope.launch {
-                    delay(3000)
-                    notification = ""
-                }
-            },
+            onClick = { saveRatesToFile(context) },
             modifier = Modifier.fillMaxWidth(),
             enabled = FileManager.hasSavedRates()
         ) {
