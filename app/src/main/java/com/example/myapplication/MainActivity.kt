@@ -1,15 +1,13 @@
 package com.example.myapplication
 
-import FileManager.saveRatesToFile
+import `FileManager.kt`.saveRatesToFile
 import Rates
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
-import android.os.Environment
 import android.util.Log
-import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -25,8 +23,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import com.example.myapplication.ui.theme.MyApplicationTheme
-import java.io.File
-import java.io.FileOutputStream
 import java.text.SimpleDateFormat
 import java.util.*
 import kotlinx.coroutines.*
@@ -51,7 +47,6 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun CurrencyConverterScreen() {
     val context = LocalContext.current
-    // Полный список валют
     val allCurrencies = listOf(
         "USD - Доллар США", "EUR - Евро", "GBP - Фунт стерлингов",
         "JPY - Японская иена", "RUB - Российский рубль", "CNY - Китайский юань",
@@ -59,7 +54,6 @@ fun CurrencyConverterScreen() {
         "HKD - Гонконгский доллар", "SGD - Сингапурский доллар", "KRW - Южнокорейская вона"
     )
 
-    // Состояния для UI
     var currency1 by remember { mutableStateOf("") }
     var expanded1 by remember { mutableStateOf(false) }
     var currency2 by remember { mutableStateOf("") }
@@ -75,7 +69,6 @@ fun CurrencyConverterScreen() {
 
     val scope = rememberCoroutineScope()
 
-    // Лаунчер для запроса разрешения
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted ->
@@ -85,12 +78,11 @@ fun CurrencyConverterScreen() {
             showPermissionDialog = true
         }
     }
-
     fun addToHistory() {
         currentRate?.let { rate ->
             val dateTime = SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.getDefault()).format(Date())
             val record = "$dateTime: 1 $currentSrcCurrency = ${"%.4f".format(rate)} $currentDstCurrency"
-            FileManager.addRateToHistory(context, currentSrcCurrency, currentDstCurrency, rate)
+            `FileManager.kt`.addRateToHistory(context, currentSrcCurrency, currentDstCurrency, rate)
             notification = "Курс добавлен в историю"
             scope.launch {
                 delay(3000)
@@ -100,14 +92,14 @@ fun CurrencyConverterScreen() {
     }
 
     fun saveRatesToFile(context: Context) {
-        if (FileManager.hasSavedRates()) {
+        if (`FileManager.kt`.hasSavedRates()) {
             val success = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q ||
                 ContextCompat.checkSelfPermission(
                     context,
                     Manifest.permission.WRITE_EXTERNAL_STORAGE
                 ) == PackageManager.PERMISSION_GRANTED
             ) {
-                FileManager.saveRatesToFile(context)
+                `FileManager.kt`.saveRatesToFile(context)
             } else {
                 permissionLauncher.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
                 return
@@ -115,7 +107,7 @@ fun CurrencyConverterScreen() {
 
             if (success) {
                 notification = "Файл сохранен в папке Download"
-                FileManager.clearSavedRates()
+                `FileManager.kt`.clearSavedRates()
             } else {
                 notification = "Ошибка при сохранении файла"
             }
@@ -139,7 +131,7 @@ fun CurrencyConverterScreen() {
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Уведомления
+        // Notifications
         Text(
             text = notification,
             color = if (notification.isNotEmpty()) MaterialTheme.colorScheme.primary
@@ -150,7 +142,7 @@ fun CurrencyConverterScreen() {
             textAlign = TextAlign.Center
         )
 
-        // Диалог запроса разрешения
+        // Permission dialogue
         if (showPermissionDialog) {
             AlertDialog(
                 onDismissRequest = { showPermissionDialog = false },
@@ -172,7 +164,7 @@ fun CurrencyConverterScreen() {
             )
         }
 
-        // Первый список с поиском
+        // First list
         ExposedDropdownMenuBox(
             expanded = expanded1,
             onExpandedChange = { expanded1 = it }
@@ -221,7 +213,7 @@ fun CurrencyConverterScreen() {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Второй список с поиском
+        // Second list
         ExposedDropdownMenuBox(
             expanded = expanded2,
             onExpandedChange = { expanded2 = it }
@@ -270,7 +262,7 @@ fun CurrencyConverterScreen() {
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        // Поле результата конвертации
+        // Result field
         TextField(
             value = when {
                 isLoading -> "Загрузка..."
@@ -285,7 +277,7 @@ fun CurrencyConverterScreen() {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Кнопка конвертации
+        // Convert button
         Button(
             onClick = {
                 if (currency1.isEmpty() || currency2.isEmpty()) {
@@ -330,7 +322,7 @@ fun CurrencyConverterScreen() {
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Кнопка добавления в историю
+        // Add to history button
         Button(
             onClick = { addToHistory() },
             modifier = Modifier.fillMaxWidth(),
@@ -341,11 +333,11 @@ fun CurrencyConverterScreen() {
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Кнопка сохранения в файл
+        // Save button
         Button(
             onClick = { saveRatesToFile(context) },
             modifier = Modifier.fillMaxWidth(),
-            enabled = FileManager.hasSavedRates()
+            enabled = `FileManager.kt`.hasSavedRates()
         ) {
             Text("Сохранить историю в файл")
         }

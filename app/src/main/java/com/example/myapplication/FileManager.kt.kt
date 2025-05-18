@@ -6,9 +6,8 @@ import java.io.File
 import java.io.FileOutputStream
 import java.text.SimpleDateFormat
 import java.util.*
-import kotlin.collections.ArrayList
 
-object FileManager {
+object `FileManager.kt` {
     private val savedRates = ArrayList<String>()
     private const val FILE_NAME = "saved_currency_rates.txt"
 
