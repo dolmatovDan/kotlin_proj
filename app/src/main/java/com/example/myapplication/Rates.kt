@@ -49,7 +49,6 @@ class Rates {
     }
 
     fun getExchangeRate(fromCurrency: String, toCurrency: String): Double? {
-        Log.d("Process", "$currencyRates")
         val fromRate = when (fromCurrency) {
             "RUB" -> 1.0
             else -> currencyRates[fromCurrency]

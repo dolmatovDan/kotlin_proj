@@ -32,11 +32,9 @@ object FileManager {
             val fileName = "${FILE_NAME_PREFIX}_${System.currentTimeMillis()}$FILE_EXTENSION"
             val content = savedRates.joinToString("\n")
 
-            // Для Android 10+ используем MediaStore
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 saveViaMediaStore(context, fileName, content)
             } else {
-                // Для старых версий - прямо в папку Downloads
                 val downloadsDir = Environment.getExternalStoragePublicDirectory(
                     Environment.DIRECTORY_DOWNLOADS
                 )
