@@ -47,6 +47,7 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun CurrencyConverterScreen() {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     val allCurrencies = listOf(
         "USD - Доллар США", "EUR - Евро", "GBP - Фунт стерлингов",
         "JPY - Японская иена", "RUB - Российский рубль", "CNY - Китайский юань",
@@ -66,7 +67,6 @@ fun CurrencyConverterScreen() {
     var currentDstCurrency by remember { mutableStateOf("") }
     var notification by remember { mutableStateOf("") }
 
-    val scope = rememberCoroutineScope()
 
 
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -107,24 +107,6 @@ fun CurrencyConverterScreen() {
                 delay(3000)
                 notification = ""
             }
-        }
-    }
-
-    @RequiresApi(Build.VERSION_CODES.Q)
-    fun saveRatesToFile() {
-        if (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                FileManager.saveToDownloads(context)
-            } else {
-                TODO("VERSION.SDK_INT < Q")
-            }
-        ) {
-            notification = "Файл успешно сохранен"
-        } else {
-            notification = "Ошибка при сохранении файла"
-        }
-        scope.launch {
-            delay(3000)
-            notification = ""
         }
     }
 
